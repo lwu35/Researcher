@@ -1,7 +1,108 @@
 import re
+import requests
+import json
+from copy import deepcopy
 
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
+
+# Helper Functions for Best Mode
+# Adapted from the provided Flask app (main.py)
+
+def extract_questions_from_content(content: str) -> list[str]:
+    """Extract questions from the questions block (e.g., \boxed_questions{...})."""
+    questions = []
+    # Attempt to find the content within oxed_questions{}
+    # This regex is a common way to find such blocks if they exist.
+    # If the questions are simply listed after a header like "❓ Questions", 
+    # this part might need adjustment based on actual LLM output format.
+    
+    # First, try to find a specific block like oxed_questions{}
+    boxed_questions_match = re.search(r'\boxed_questions\{(.*?)\}', content, re.DOTALL)
+    lines = [] # Initialize lines to an empty list
+    if boxed_questions_match:
+        questions_block = boxed_questions_match.group(1)
+        # Assuming questions within the block are separated by newlines
+        lines = [line.strip() for line in questions_block.split('\n') if line.strip()]
+    else:
+        # Fallback or alternative: if questions are under a "## Questions" or "❓ Questions" header
+        # This part might need refinement based on the actual output format from the LLM.
+        # For now, let's assume questions are separated by newlines after such a header.
+        if "❓ Questions" in content: # Or a similar marker
+            potential_questions_section = content.split("❓ Questions", 1)[-1]
+            lines = [line.strip() for line in potential_questions_section.split('\n') if line.strip()]
+        elif "## Questions" in content: # Handle markdown style headers
+            potential_questions_section = content.split("## Questions", 1)[-1]
+            lines = [line.strip() for line in potential_questions_section.split('\n') if line.strip()]
+        else: # if no specific block found, assume content itself might be questions or needs different parsing.
+            # This part needs to be robust. For now, using the provided logic from main.py's extract_questions_from_content
+            # This assumes questions are separated by newlines.
+            lines = [line.strip() for line in content.split('\n') if line.strip()]
+
+    # Process lines to extract actual questions
+    for line in lines:
+        # Skip lines that are not questions (headers, etc.)
+        # The flask example had:
+        # if line.startswith('#') or not line:
+        #    continue
+        # This might need to be adapted if the LLM output for questions is different.
+        # For now, let's assume any non-empty line in this block is a question.
+        # A more robust solution might look for lines ending with '?' or starting with a number/bullet.
+        cleaned_line = line.lstrip("0123456789. ").strip() # Remove leading numbers/bullets
+        if cleaned_line and cleaned_line != "}": # Ensure it's not just the closing brace of a block
+            questions.append(cleaned_line)
+    
+    # Deduplicate questions
+    return list(dict.fromkeys(questions))
+
+
+def retrieve_information(questions: list[str]) -> list[dict]:
+    """Retrieve information for questions using the OpenScholar external API."""
+    if not questions:
+        return []
+    try:
+        # The URL for the OpenScholar API
+        openscholar_api_url = 'http://127.0.0.1:38015/batch_ask'
+        response = requests.post(
+            openscholar_api_url,
+            json={"questions": questions},
+            timeout=600  # Set a reasonable timeout (in seconds)
+        )
+
+        if response.status_code == 200:
+            # Assuming the API returns a JSON with a 'results' key
+            # which is a list of dictionaries, one for each question.
+            return response.json().get('results', [])
+        else:
+            # Log error or handle appropriately
+            print(f"Error retrieving information from OpenScholar API: {response.status_code} - {response.text}")
+            return [{"error": f"API Error {response.status_code}", "output": "", "final_passages": ""} for _ in questions]
+    except requests.exceptions.RequestException as e:
+        # Handle network errors, timeouts, etc.
+        print(f"Exception during information retrieval: {str(e)}")
+        return [{"error": f"RequestException: {str(e)}", "output": "", "final_passages": ""} for _ in questions]
+
+
+def get_question_and_answer_text(questions: list[str], results: list[dict]) -> str:
+    """Format questions and answers for the second model call."""
+    qa_text_parts = []
+    for i, question in enumerate(questions):
+        qa_text_parts.append(f"## Question {i + 1}:\n{question}")
+        if i < len(results) and results[i]:
+            result = results[i]
+            passages = result.get("final_passages", "N/A")
+            answer = result.get("output", "N/A")
+            # Sanitize content slightly for inclusion in a prompt if necessary, though LLMs are usually robust.
+            # The flask app used .replace('"', "'").replace('\\', '') which might be too aggressive.
+            # Keeping it simple here.
+            qa_text_parts.append(f"### Retrieved Passages:\n{passages}")
+            qa_text_parts.append(f"### Answer from OpenScholar:\n{answer}")
+        else:
+            qa_text_parts.append("### Retrieved Passages:\nNo information retrieved.")
+            qa_text_parts.append("### Answer from OpenScholar:\nNo answer retrieved.")
+        qa_text_parts.append("**********") # Separator
+    
+    return "\n\n".join(qa_text_parts)
 
 
 class DeepReviewer:
@@ -85,61 +186,97 @@ class DeepReviewer:
         Generate a peer review for the given academic paper.
 
         Args:
-            paper_context (str): The paper content to review
+            paper_context (str): The paper content to review. Can be a single string or a list of strings for batch processing.
             mode (str): Review mode. Options: "Fast Mode", "Standard Mode", "Best Mode"
             reviewer_num (int): Number of reviewers to simulate
-            max_tokens (int): Maximum number of tokens to generate
+            max_tokens (int): Maximum number of tokens to generate for each LLM call.
 
         Returns:
-            dict: Generated review with scores and feedback
+            list: A list of structured reviews (dictionaries). Each dictionary corresponds to one input paper_context.
         """
-        # Prepare system prompt
         system_prompt = self._generate_system_prompt(mode, reviewer_num)
 
-        if type(paper_context) == str:
-            paper_context = [paper_context]
+        if isinstance(paper_context, str):
+            paper_contexts = [paper_context]
+        elif isinstance(paper_context, list):
+            paper_contexts = paper_context
+        else:
+            raise TypeError("paper_context must be a string or a list of strings.")
 
+        generated_reviews_batch = []
+        
+        batch_size = 10 
+        for i in range(0, len(paper_contexts), batch_size):
+            current_batch_contexts = paper_contexts[i:i + batch_size]
+            
+            if mode != "Best Mode":
+                prompts = []
+                for single_paper_context in current_batch_contexts:
+                    messages = [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": single_paper_context}
+                    ]
+                    input_text = self.tokenizer.apply_chat_template(
+                        messages, tokenize=False, add_generation_prompt=True
+                    )
+                    prompts.append(input_text)
 
+                sampling_params = SamplingParams(temperature=0.4, top_p=0.95, max_tokens=max_tokens)
+                outputs = self.model.generate(prompts, sampling_params)
 
-        generated_reviews = []
-        batch_size = 10
-        for n in range(0,len(paper_context),batch_size):
-            # Apply chat template
-            prompts = []
-            for r in range(min(batch_size, len(paper_context) - n)):
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": paper_context[n+r]}
-                ]
-                input_text = self.tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True
-                )
-                prompts.append(input_text)
-            # Prepare sampling parameters
-            sampling_params = SamplingParams(
-                temperature=0.4,
-                top_p=0.95,
-                max_tokens=45000
-            )
+                for output in outputs:
+                    generated_text = output.outputs[0].text
+                    review = self._parse_review(generated_text)
+                    generated_reviews_batch.append(review)
+            else: # Best Mode - Process one by one from the batch due to sequential nature of API calls
+                for single_paper_context in current_batch_contexts:
+                    # --- First LLM Call (Best Mode) ---
+                    messages_step1 = [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": single_paper_context}
+                    ]
+                    input_text_step1 = self.tokenizer.apply_chat_template(
+                        messages_step1, tokenize=False, add_generation_prompt=True
+                    )
+                    sampling_params_step1 = SamplingParams(temperature=0.4, top_p=0.95, max_tokens=max_tokens)
+                    
+                    outputs_step1 = self.model.generate([input_text_step1], sampling_params_step1)
+                    generated_text_step1 = outputs_step1[0].outputs[0].text
 
-            # Generate review
-            outputs = self.model.generate(
-                prompts,
-                sampling_params
-            )
+                    # --- Extract Questions (Best Mode) ---
+                    questions = extract_questions_from_content(generated_text_step1)
 
-            # Process generated review text
-            for output_num in range(len(outputs)):
-                # Process generated text
-                generated_text = outputs[output_num].outputs[0].text
-                # Use existing CycleResearcher utility to parse generated text
-                print(generated_text)
-                review = self._parse_review(generated_text)
-                generated_reviews.append(review)
+                    if not questions:
+                        # Fallback: parse the step 1 output as the final review.
+                        review = self._parse_review(generated_text_step1)
+                        generated_reviews_batch.append(review)
+                        continue # Next paper in batch
 
-        return generated_reviews
+                    # --- Retrieve Information from OpenScholar (Best Mode) ---
+                    retrieved_data = retrieve_information(questions)
+
+                    # --- Format Q&A Text (Best Mode) ---
+                    qa_text = get_question_and_answer_text(questions, retrieved_data)
+
+                    # --- Second LLM Call (Best Mode) ---
+                    messages_step2 = [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": single_paper_context},
+                        {"role": "assistant", "content": generated_text_step1}, 
+                        {"role": "user", "content": qa_text} 
+                    ]
+                    input_text_step2 = self.tokenizer.apply_chat_template(
+                        messages_step2, tokenize=False, add_generation_prompt=True
+                    )
+                    sampling_params_step2 = SamplingParams(temperature=0.4, top_p=0.95, max_tokens=max_tokens)
+                    
+                    outputs_step2 = self.model.generate([input_text_step2], sampling_params_step2)
+                    generated_text_step2 = outputs_step2[0].outputs[0].text
+                    
+                    review = self._parse_review(generated_text_step2)
+                    generated_reviews_batch.append(review)
+
+        return generated_reviews_batch
 
     def _parse_review(self, generated_text):
         """
