@@ -131,17 +131,13 @@ OpenScholar is a retrieval-augmented generation-based academic research question
    cd OpenScholar
    chmod +x start_models.sh
    ./start_models.sh
-   
-   # For Windows users
-   cd OpenScholar
-   start_models.bat
    ```
 
 3. **Start API Service**:
    ```bash
    python openscholar_api.py \
        --s2_api_key YOUR_SEMANTIC_SCHOLAR_API_KEY \
-       --reranker_path /path/to/reranker/model
+       --reranker_path OpenSciLM/OpenScholar_Reranker
    ```
 
 4. **Using the API**:
