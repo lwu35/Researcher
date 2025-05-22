@@ -67,7 +67,7 @@ vllm serve Qwen/Qwen3-0.6B \
 ```bash
 python openscholar_api.py \
     --s2_api_key YOUR_SEMANTIC_SCHOLAR_API_KEY \
-    --reranker_path /path/to/your/reranker/model \
+    --reranker_path OpenSciLM/OpenScholar_Reranker \
     --api_key sk-your-api-key-here
 ```
 
@@ -77,7 +77,7 @@ python openscholar_api.py \
 2. Modify the configuration parameters:
    ```python
    self.S2_API_KEY = "your_actual_s2_api_key"
-   self.RERANKER_PATH = "/path/to/your/reranker/model"
+   self.RERANKER_PATH = "OpenSciLM/OpenScholar_Reranker"
    ```
 3. Run the API service:
    ```bash
