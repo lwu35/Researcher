@@ -114,7 +114,64 @@ for i, review in enumerate(review_results[0]['reviews']):
     print(f"Reviewer {i+1} Rating: {review.get('rating', 'N/A')}")
     print(f"Reviewer {i+1} Summary: {review.get('summary', 'N/A')[:100]}...")
 ```
-<img src="img/deepreviewer.png" alt="CycleResearcher Architecture" width="80%">
+
+#### Launching DeepReviewer Best Mode
+
+DeepReviewer's Best Mode provides the most comprehensive review experience, including background knowledge search, multi-reviewer simulation, and self-verification:
+
+```python
+# Use Best Mode for in-depth review
+review_results = deep_reviewer.evaluate(
+    paper_text,
+    mode="Best Mode",      # Most comprehensive review mode
+    reviewer_num=6,        # Simulate 6 different reviewers
+    enable_search=True,    # Enable background knowledge search
+    self_verification=True # Enable self-verification
+)
+```
+
+### Using OpenScholar
+
+OpenScholar is a retrieval-augmented generation-based academic research question-answering system. For detailed usage instructions, please refer to the [OpenScholar directory](./OpenScholar/).
+
+#### Quick Start Guide for OpenScholar
+
+1. **Apply for Semantic Scholar API Key**: Visit [Semantic Scholar API](https://www.semanticscholar.org/product/api)
+
+2. **Start Model Services**:
+   ```bash
+   # For Linux/Mac users
+   cd OpenScholar
+   chmod +x start_models.sh
+   ./start_models.sh
+   
+   # For Windows users
+   cd OpenScholar
+   start_models.bat
+   ```
+
+3. **Start API Service**:
+   ```bash
+   python openscholar_api.py \
+       --s2_api_key YOUR_SEMANTIC_SCHOLAR_API_KEY \
+       --reranker_path /path/to/reranker/model
+   ```
+
+4. **Using the API**:
+   ```python
+   import requests
+   
+   # Send questions to OpenScholar API
+   response = requests.post("http://localhost:38015/batch_ask", json={
+       "questions": ["How do retrieval-augmented LMs perform in knowledge-intensive tasks?"]
+   })
+   
+   result = response.json()
+   print("OpenScholar Answer:", result["results"][0]["output"])
+   ```
+
+
+<img src="img/deepreviewer.png" alt="DeepReviewer Architecture" width="80%">
 
 ## 📊 Model Evaluation
 
