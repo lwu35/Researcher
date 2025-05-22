@@ -129,7 +129,62 @@ class OpenScholarAPI:
 
 class Config:
     def __init__(self):
-                # API Configuration        self.api_key = "YOUR_API_KEY_HERE"  # Replace with actual API key        self.s2_api_key = "YOUR_SEMANTIC_SCHOLAR_API_KEY"  # Semantic Scholar API key                # Model Configuration        self.large_model_name = "OpenSciLM/Llama-3.1_OpenScholar-8B"        self.small_model_name = "Qwen/Qwen3-0.6B"        self.reranker_path = "YOUR_RERANKER_PATH"  # Replace with actual reranker path                # Port Configuration        self.large_model_port = 38011        self.small_model_port = 38014        self.api_port = 38015                # Batch Processing Configuration        self.search_batch_size = 100        self.scholar_batch_size = 100                # Other Hyperparameters        self.top_n = 10        self.max_tokens = 3000
+        # ===== API Key Configuration =====
+        # Semantic Scholar API Key (Required)
+        # Apply at: https://www.semanticscholar.org/product/api
+        self.S2_API_KEY = "YOUR_SEMANTIC_SCHOLAR_API_KEY"
+        
+        # vLLM API Key (can be any string, used for API calls)
+        self.API_KEY = "sk-your-api-key-here"
+        
+        # ===== Model Configuration =====
+        # Large model name (for main inference)
+        self.LARGE_MODEL_NAME = "OpenSciLM/Llama-3.1_OpenScholar-8B"
+        
+        # Small model name (for search keyword generation)
+        self.SMALL_MODEL_NAME = "Qwen/Qwen3-0.6B"
+        
+        # Reranker model path (please replace with your actual path)
+        self.RERANKER_PATH = "OpenSciLM/OpenScholar_Reranker"
+        
+        # ===== Port Configuration =====
+        # Large model service port
+        self.LARGE_MODEL_PORT = 38011
+        
+        # Small model service port
+        self.SMALL_MODEL_PORT = 38014
+        
+        # API service port
+        self.API_PORT = 38015
+        
+        # ===== Processing Parameters =====
+        # Search generation batch size
+        self.SEARCH_BATCH_SIZE = 100
+        
+        # OpenScholar processing batch size
+        self.SCHOLAR_BATCH_SIZE = 100
+        
+        # Number of papers to retrieve
+        self.TOP_N = 10
+        
+        # Maximum tokens for generation
+        self.MAX_TOKENS = 3000
+        
+        # ===== GPU Configuration =====
+        # CUDA device setting (optional)
+        self.CUDA_VISIBLE_DEVICES = "0"
+        
+        # Large model GPU memory utilization
+        self.LARGE_MODEL_GPU_MEMORY_UTILIZATION = 0.8
+        
+        # Small model GPU memory utilization
+        self.SMALL_MODEL_GPU_MEMORY_UTILIZATION = 0.05
+        
+        # Large model maximum length
+        self.LARGE_MODEL_MAX_LEN = 70000
+        
+        # Small model maximum length
+        self.SMALL_MODEL_MAX_LEN = 10000
 
 def parse_args():
     parser = argparse.ArgumentParser(description='OpenScholar API Server')
