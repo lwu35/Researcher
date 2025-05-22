@@ -117,24 +117,11 @@ for i, review in enumerate(review_results[0]['reviews']):
 
 #### Launching DeepReviewer Best Mode
 
-DeepReviewer's Best Mode provides the most comprehensive review experience, including background knowledge search, multi-reviewer simulation, and self-verification:
-
-```python
-# Use Best Mode for in-depth review
-review_results = deep_reviewer.evaluate(
-    paper_text,
-    mode="Best Mode",      # Most comprehensive review mode
-    reviewer_num=6,        # Simulate 6 different reviewers
-    enable_search=True,    # Enable background knowledge search
-    self_verification=True # Enable self-verification
-)
-```
-
-### Using OpenScholar
+##### Using OpenScholar
 
 OpenScholar is a retrieval-augmented generation-based academic research question-answering system. For detailed usage instructions, please refer to the [OpenScholar directory](./OpenScholar/).
 
-#### Quick Start Guide for OpenScholar
+##### Quick Start Guide for OpenScholar
 
 1. **Apply for Semantic Scholar API Key**: Visit [Semantic Scholar API](https://www.semanticscholar.org/product/api)
 
@@ -169,6 +156,21 @@ OpenScholar is a retrieval-augmented generation-based academic research question
    result = response.json()
    print("OpenScholar Answer:", result["results"][0]["output"])
    ```
+
+#### Best Mode
+DeepReviewer's Best Mode provides the most comprehensive review experience, including background knowledge search, multi-reviewer simulation, and self-verification:
+
+```python
+# Use Best Mode for in-depth review
+review_results = deep_reviewer.evaluate(
+    paper_text,
+    mode="Best Mode",      # Most comprehensive review mode
+    reviewer_num=6,        # Simulate 6 different reviewers
+    enable_search=True,    # Enable background knowledge search
+    self_verification=True # Enable self-verification
+)
+```
+
 
 
 <img src="img/deepreviewer.png" alt="DeepReviewer Architecture" width="80%">
