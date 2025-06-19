@@ -146,7 +146,7 @@ class DeepReviewer:
         self.model = LLM(
             model=model_name,
             tensor_parallel_size=tensor_parallel_size,
-            max_model_len=70000,
+            max_model_len=90000,
             gpu_memory_utilization=gpu_memory_utilization
         )
 
