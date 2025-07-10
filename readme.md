@@ -1,4 +1,4 @@
-# AI-powered Research and Review Ecosystem [ICLR 2025, ACL 2025]
+# AI-powered Research and Review Agents [ICLR 2025 / ACL 2025]
 
 <div align="center">
   
@@ -17,13 +17,13 @@
 
 
 ### Update:
-[04/26/2025] We hosted [AI Co-scientist Discussion](https://ai-researcher.net/social-iclr-2025) in ICLR 2025, Over 300 people gathered together!
+[04/26/2025] We hosted [AI Co-scientist Discussion](https://ai-researcher.net/social-iclr-2025) in ICLR 2025, over 300 people gathered together!
 
 [04/06/2025] We have collected 400 papers related to AI Scientists in our [Awesome-AI-Scientist GitHub repository](https://github.com/ResearAI/Awesome-AI-Scientist). If you're interested in this field, don't miss out!
 
 [03/22/2025] We've just rolled out an exciting new feature for https://ai-researcher.net! 🎉 Now you can directly read arXiv papers with unprecedented ease! 📚✨ 
 
-Simply transform any arXiv link from: `https://arxiv.org/abs/2503.08569` -> `https://ai-researcher.net/abs/2503.08569`
+Transform any arXiv link from: `https://arxiv.org/abs/2503.08569` -> `https://ai-researcher.net/abs/2503.08569`
 
 
 ## 🔍 Overview
@@ -58,18 +58,18 @@ pip install ai_researcher
 from ai_researcher import CycleResearcher
 from ai_researcher.utils import print_paper_summary
 
-# Initialize CycleResearcher with default 12B model
+# Initialize CycleResearcher with the default 12B model
 researcher = CycleResearcher(model_size="12B")
 
 # Load references from BibTeX file
 with open('cycleresearcher_references.bib', 'r') as f:
     references_content = f.read()
 
-# Generate paper with specific references
+# Generate a paper with specific references
 generated_papers = researcher.generate_paper(
-    topic="AI Researcher",
-    references=references_content,
-    n=1  # Generate a single paper
+    topic = "AI Researcher",
+    references = references_content,
+    n = 1  # Generate a single paper
 )
 
 # Print summary of generated paper
@@ -82,7 +82,7 @@ print_paper_summary(generated_papers[0])
 # Import necessary libraries
 from ai_researcher import CycleReviewer
 
-# Initialize CycleReviewer with default 8B model
+# Initialize CycleReviewer with the default 8B model
 reviewer = CycleReviewer(model_size="8B")
 
 # Review a paper (assuming paper_text contains the paper content)
