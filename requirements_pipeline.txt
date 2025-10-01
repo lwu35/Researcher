@@ -1,0 +1,7 @@
+ai_researcher>=0.1.0
+transformers>=4.48.2
+vllm>=0.7.2
+bibtexparser
+openai>=1.0.0
+scholarly
+requests 
