@@ -45,7 +45,7 @@ try:
     researcher = CycleResearcher(
         model_size="12B",
         gpu_memory_utilization=0.9,  # Lower to reduce memory usage
-        max_model_len=40000           # Lower to reduce memory requirements
+        max_model_len=25000           # Lower to reduce memory requirements
     )
     print("   ✅ Model loaded successfully!")
     
