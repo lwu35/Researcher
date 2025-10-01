@@ -42,7 +42,11 @@ print("   This may take 10-30 minutes depending on your internet speed...")
 
 try:
     # Initialize CycleResearcher with the default 12B model
-    researcher = CycleResearcher(model_size="12B")
+    researcher = CycleResearcher(
+        model_size="12B",
+        gpu_memory_utilization=0.9,  # Lower to reduce memory usage
+        max_model_len=40000           # Lower to reduce memory requirements
+    )
     print("   ✅ Model loaded successfully!")
     
     print("\n✍️  Step 3: Generating research paper...")
