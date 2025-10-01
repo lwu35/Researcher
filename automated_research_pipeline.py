@@ -122,7 +122,7 @@ class AutomatedResearchPipeline:
         
         print("🤖 Using OpenAI to generate search queries...")
         
-        prompt = f"""Given this research topic, generate 5-7 specific search queries that would find the most relevant academic papers. 
+        prompt = f"""Given this research topic, generate 10 specific search queries that would find the most relevant academic papers. 
 Focus on technical terms, methods, and established research areas.
 
 Research Title: {topic_data['title']}
@@ -146,7 +146,7 @@ Return ONLY the search queries, one per line, without numbering or bullet points
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=300
+                max_tokens=600
             )
             
             queries_text = response.choices[0].message.content.strip()
@@ -287,20 +287,31 @@ Return ONLY the search queries, one per line, without numbering or bullet points
             # Determine publication type
             venue = paper.get('venue', 'arXiv')
             arxiv_id = paper.get('externalIds', {}).get('ArXiv', '')
+            abstract = paper.get('abstract', '')
+            citation_count = paper.get('citationCount', 0)
+            
+            # Clean abstract for BibTeX (escape special chars)
+            if abstract:
+                abstract = abstract.replace('{', '').replace('}', '').replace('%', '\\%')
+                abstract = abstract[:500] + '...' if len(abstract) > 500 else abstract  # Limit length
             
             if arxiv_id:
                 bibtex = f"""@article{{{cite_key},
   title={{{title}}},
   author={{{authors}}},
   journal={{arXiv preprint arXiv:{arxiv_id}}},
-  year={{{year}}}
+  year={{{year}}},
+  abstract={{{abstract}}},
+  note={{Citations: {citation_count}}}
 }}"""
             else:
                 bibtex = f"""@article{{{cite_key},
   title={{{title}}},
   author={{{authors}}},
   journal={{{venue}}},
-  year={{{year}}}
+  year={{{year}}},
+  abstract={{{abstract}}},
+  note={{Citations: {citation_count}}}
 }}"""
             
             bibtex_entries.append(bibtex)
@@ -328,11 +339,18 @@ Return ONLY the search queries, one per line, without numbering or bullet points
             if isinstance(authors, list):
                 authors = ' and '.join(authors)
             
+            # Try to get abstract from Google Scholar (may not always be available)
+            abstract = paper.get('bib', {}).get('abstract', '')
+            if abstract:
+                abstract = abstract.replace('{', '').replace('}', '').replace('%', '\\%')
+                abstract = abstract[:500] + '...' if len(abstract) > 500 else abstract
+            
             bibtex = f"""@article{{{cite_key},
   title={{{title}}},
   author={{{authors}}},
   journal={{{bib.get('venue', 'N/A')}}},
-  year={{{year}}}
+  year={{{year}}},
+  abstract={{{abstract}}}
 }}"""
             
             bibtex_entries.append(bibtex)
@@ -375,7 +393,7 @@ Return ONLY the search queries, one per line, without numbering or bullet points
             if use_semantic_scholar:
                 semantic_papers = self.search_semantic_scholar(query, papers_per_query)
                 all_semantic_papers.extend(semantic_papers)
-                time.sleep(1.5)  # Rate limiting: ~1 call per second
+                time.sleep(2)  # Rate limiting: ~1 call per second
             
             if use_google_scholar and SCHOLARLY_AVAILABLE:
                 scholar_papers = self.search_google_scholar(query, papers_per_query)
@@ -578,9 +596,9 @@ def main():
     MAX_MODEL_LEN = 25000
     
     # Reference search configuration
-    PAPERS_PER_QUERY = 5
+    PAPERS_PER_QUERY = 10
     USE_SEMANTIC_SCHOLAR = True
-    USE_GOOGLE_SCHOLAR = True  # Set to False if scholarly not working
+    USE_GOOGLE_SCHOLAR = False  # Disabled - Google Scholar blocks server IPs
     
     # Initialize pipeline
     pipeline = AutomatedResearchPipeline(openai_api_key=OPENAI_API_KEY)
